@@ -7,6 +7,7 @@ const path = require('path');
 
 const app = express();
 
+const fs = require('fs');
 
 app.use(express.json())
 app.use(bodyParser.json());
@@ -39,7 +40,7 @@ const fileSchema = new mongoose.Schema({
     imagedomain: String,
     Categories:String,
     filename: String,
-    jobtitle:String
+    jobtitle:String,
 });
 
 const File = mongoose.model('File', fileSchema);
@@ -60,15 +61,16 @@ const upload = multer({ storage: storage });
 
 // API endpoint to upload file 
 // /upload
-app.post('/submit', upload.single('file'), async (req, res) => {
-    const { summarizedContent,campaignId,campaignName,uniqueId,whitepaperHeading,imagedomain,Categories,jobtitle} = req.body;
-    const filename = req.file.filename;
+// app.post('/submit', upload.single('file'), async (req, res) => {
+//     const { summarizedContent,campaignId,campaignName,uniqueId,whitepaperHeading,imagedomain,Categories,jobtitle} = req.body;
+    
+//     const filename = req.file.filename;
 
-    const newFile = new File({ summarizedContent,campaignId,campaignName,uniqueId,whitepaperHeading,imagedomain,Categories,jobtitle, filename });
-    await newFile.save();
+//     const newFile = new File({ summarizedContent,campaignId,campaignName,uniqueId,whitepaperHeading,imagedomain,Categories,jobtitle, filename });
+//     await newFile.save();
 
-    res.json({ message: 'File uploaded successfully', file: newFile });
-});
+//     res.json({ message: 'File uploaded successfully', file: newFile });
+// });
 
 
 
@@ -82,20 +84,65 @@ app.get('/data', async (req, res) => {
     }
 });
 
+app.post('/submit', upload.single('file'), async (req, res) => {
+    try {
+        // Log the uploaded file
+        console.log('Uploaded file:', req.file);
+
+        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, Categories, jobtitle } = req.body;
+        const filename = req.file.filename;
+
+        // Log the file details
+        console.log('File details:', {
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, Categories, jobtitle, filename
+        });
+
+        const newFile = new File({
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, Categories, jobtitle, filename
+        });
+
+        // Save the file details to the database
+        await newFile.save();
+
+        res.json({ message: 'File uploaded successfully', file: newFile });
+    } catch (err) {
+        console.error('Error uploading file:', err);
+        res.status(500).send('Server error');
+    }
+});
+
+
 
 // API endpoint to get file info and download file
 app.get('/data/download/:id', async (req, res) => {
     try {
         const file = await File.findById(req.params.id);
+
         if (!file) {
             return res.status(404).send('File not found');
         }
-        res.download(path.join(__dirname, 'uploads', file.filename), file.filename);
+    // Define the uploads directory and file path
+    const uploadsDirectory = path.join(__dirname, 'uploads');
+    const filePath = path.join(uploadsDirectory, file.filename);
+        
+        if (!fs.existsSync(filePath)) {
+            return res.status(500).send('File not found on server');
+        }
+        
+        res.download(filePath, file.filename, (err) => {
+            if (err) {
+                console.error(err); // Log the error for debugging
+                res.status(500).send('Server error');
+            }
+        });
         
     } catch (err) {
+        console.error(err);  // Log the error for debugging
         res.status(500).send('Server error');
     }
 });
+
+    
 
 // Endpoint to get a file by ID
 app.get('/data/:id', async (req, res) => {
@@ -193,7 +240,6 @@ app.get('/data/cat/:Categories',async (req,res)=>{
     }
   })
   
-
 
 // Start the server
 const port = process.env.PORT || 3000;
