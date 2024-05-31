@@ -41,6 +41,7 @@ const fileSchema = new mongoose.Schema({
     Categories:String,
     filename: String,
     jobtitle:String,
+    wpimg:String,
 });
 
 const File = mongoose.model('File', fileSchema);
@@ -58,22 +59,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 
-
-// API endpoint to upload file 
-// /upload
-// app.post('/submit', upload.single('file'), async (req, res) => {
-//     const { summarizedContent,campaignId,campaignName,uniqueId,whitepaperHeading,imagedomain,Categories,jobtitle} = req.body;
-    
-//     const filename = req.file.filename;
-
-//     const newFile = new File({ summarizedContent,campaignId,campaignName,uniqueId,whitepaperHeading,imagedomain,Categories,jobtitle, filename });
-//     await newFile.save();
-
-//     res.json({ message: 'File uploaded successfully', file: newFile });
-// });
-
-
-
 // API endpoint to get all files
 app.get('/data', async (req, res) => {
     try {
@@ -89,16 +74,16 @@ app.post('/submit', upload.single('file'), async (req, res) => {
         // Log the uploaded file
         console.log('Uploaded file:', req.file);
 
-        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, Categories, jobtitle } = req.body;
+        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle } = req.body;
         const filename = req.file.filename;
 
         // Log the file details
         console.log('File details:', {
-            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, Categories, jobtitle, filename
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, filename
         });
 
         const newFile = new File({
-            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, Categories, jobtitle, filename
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, filename
         });
 
         // Save the file details to the database
@@ -110,7 +95,6 @@ app.post('/submit', upload.single('file'), async (req, res) => {
         res.status(500).send('Server error');
     }
 });
-
 
 
 // API endpoint to get file info and download file
@@ -142,7 +126,6 @@ app.get('/data/download/:id', async (req, res) => {
     }
 });
 
-    
 
 // Endpoint to get a file by ID
 app.get('/data/:id', async (req, res) => {
@@ -166,7 +149,6 @@ app.get('/data/:id', async (req, res) => {
         res.status(500).send('Server error');
     }
 });
-
 
 // Delete data by ID
 app.delete('/data/:id', async (req, res) => {
