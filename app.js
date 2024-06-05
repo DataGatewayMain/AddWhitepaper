@@ -4,15 +4,18 @@ const bodyParser = require('body-parser');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
-
-const fs = require('fs');
 
 app.use(express.json())
 app.use(bodyParser.json());
 app.use(cors());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const axios = require('axios');
 
 // Middleware to log requests
 app.use((req, res, next) => {
@@ -39,9 +42,9 @@ const fileSchema = new mongoose.Schema({
     whitepaperHeading: String,
     imagedomain: String,
     Categories:String,
-    filename: String,
     jobtitle:String,
     wpimg:String,
+    pdfUrl: String,
 });
 
 const File = mongoose.model('File', fileSchema);
@@ -58,7 +61,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-
 // API endpoint to get all files
 app.get('/data', async (req, res) => {
     try {
@@ -71,19 +73,18 @@ app.get('/data', async (req, res) => {
 
 app.post('/submit', upload.single('file'), async (req, res) => {
     try {
-        // Log the uploaded file
-        console.log('Uploaded file:', req.file);
+        
 
-        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle } = req.body;
-        const filename = req.file.filename;
+        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl } = req.body;
+        
 
         // Log the file details
         console.log('File details:', {
-            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, filename
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl 
         });
 
         const newFile = new File({
-            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, filename
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, pdfUrl
         });
 
         // Save the file details to the database
@@ -92,36 +93,6 @@ app.post('/submit', upload.single('file'), async (req, res) => {
         res.json({ message: 'File uploaded successfully', file: newFile });
     } catch (err) {
         console.error('Error uploading file:', err);
-        res.status(500).send('Server error');
-    }
-});
-
-
-// API endpoint to get file info and download file
-app.get('/data/download/:id', async (req, res) => {
-    try {
-        const file = await File.findById(req.params.id);
-
-        if (!file) {
-            return res.status(404).send('File not found');
-        }
-    // Define the uploads directory and file path
-    const uploadsDirectory = path.join(__dirname, 'uploads');
-    const filePath = path.join(uploadsDirectory, file.filename);
-        
-        if (!fs.existsSync(filePath)) {
-            return res.status(500).send('File not found on server');
-        }
-        
-        res.download(filePath, file.filename, (err) => {
-            if (err) {
-                console.error(err); // Log the error for debugging
-                res.status(500).send('Server error');
-            }
-        });
-        
-    } catch (err) {
-        console.error(err);  // Log the error for debugging
         res.status(500).send('Server error');
     }
 });
@@ -196,7 +167,6 @@ app.put('/data/:id',async (req,res)=>{
     }
   });
 
-
 // get data by category name
 app.get('/data/cat/:Categories',async (req,res)=>{
     try {
@@ -221,10 +191,11 @@ app.get('/data/cat/:Categories',async (req,res)=>{
       res.status(500).json({ message: 'Internal server error' });
     }
   })
-  
+ 
 
 // Start the server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log(`Server started on port ${port}`);
 });
+
