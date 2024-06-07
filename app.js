@@ -5,8 +5,18 @@ const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const morgan = require("morgan"); 
+const apicache = require("apicache"); 
 
 const app = express();
+
+app.use(morgan('dev')); 
+  
+//configure apicache  
+let cache = apicache.middleware 
+  
+//caching all routes for 5 minutes 
+app.use(cache('1 minutes')) 
 
 app.use(express.json())
 app.use(bodyParser.json());
