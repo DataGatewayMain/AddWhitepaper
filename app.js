@@ -182,7 +182,8 @@ app.get('/data/cat/:Categories',async (req,res)=>{
     try {
       const Categories = req.params.Categories;
       const data = await File.find({ Categories: Categories });
-      res.json(data);
+      const total = data.length
+      res.json({total,data});
     } catch (error) {
       console.error('Error fetching data:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -205,8 +206,6 @@ app.get('/data/cat/:Categories',async (req,res)=>{
     }
   })
 
-
- 
 
 // Start the server
 const port = process.env.PORT || 3000;
