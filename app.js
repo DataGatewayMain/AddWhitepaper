@@ -16,7 +16,7 @@ app.use(morgan('dev'));
 let cache = apicache.middleware 
   
 //caching all routes for 5 minutes 
-app.use(cache('1 minutes')) 
+app.use(cache('30 seconds')) 
 
 app.use(express.json())
 app.use(bodyParser.json());
@@ -195,12 +195,17 @@ app.get('/data/cat/:Categories',async (req,res)=>{
     try {
       const jobtitle = req.params.jobtitle
       const data = await File.find({ jobtitle: jobtitle });
-      res.json(data);
+      const total = data.length
+      res.json({ total, data });
+      console.log("total jt:",total);
+     
     } catch (error) {
       console.error('Error fetching data:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   })
+
+
  
 
 // Start the server
