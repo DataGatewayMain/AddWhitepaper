@@ -55,6 +55,7 @@ const fileSchema = new mongoose.Schema({
     jobtitle:String,
     wpimg:String,
     pdfUrl: String,
+    privacylink:String
 });
 
 const File = mongoose.model('File', fileSchema);
@@ -85,15 +86,15 @@ app.post('/submit', upload.single('file'), async (req, res) => {
     try {
         
 
-        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl } = req.body;
+        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl,privacylink } = req.body;
         
         // Log the file details
         console.log('File details:', {
-            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl 
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl ,privacylink
         });
 
         const newFile = new File({
-            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, pdfUrl
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, pdfUrl,privacylink
         });
 
         // Save the file details to the database
