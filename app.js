@@ -74,7 +74,7 @@ const upload = multer({ storage: storage });
 // API endpoint to get all files
 app.get('/data', async (req, res) => {
     try {
-        const files = await File.find();
+        const files = await File.find().sort({ _id: -1 });
         res.json(files);
     } catch (err) {
         res.status(500).send('Server error');
@@ -87,7 +87,6 @@ app.post('/submit', upload.single('file'), async (req, res) => {
 
         const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl } = req.body;
         
-
         // Log the file details
         console.log('File details:', {
             summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl 
@@ -168,7 +167,7 @@ app.put('/data/:id',async (req,res)=>{
  app.get('/data/campaign/:campaignName', async (req, res) => {
     try {
         const campaignName = req.params.campaignName;
-        const data = await File.find({campaignName: campaignName });
+        const data = await File.find({campaignName: campaignName }).sort({ _id: -1 });
         console.log("The Data Is:",data);
         res.json(data);
     } catch (error) {
@@ -181,7 +180,7 @@ app.put('/data/:id',async (req,res)=>{
 app.get('/data/cat/:Categories',async (req,res)=>{
     try {
       const Categories = req.params.Categories;
-      const data = await File.find({ Categories: Categories });
+      const data = await File.find({ Categories: Categories }).sort({ _id: -1 });
       const total = data.length
       res.json({total,data});
     } catch (error) {
@@ -195,7 +194,7 @@ app.get('/data/cat/:Categories',async (req,res)=>{
   app.get('/data/jt/:jobtitle',async (req,res)=>{
     try {
       const jobtitle = req.params.jobtitle
-      const data = await File.find({ jobtitle: jobtitle });
+      const data = await File.find({ jobtitle: jobtitle }).sort({ _id: -1 });
       const total = data.length
       res.json({ total, data });
       console.log("total jt:",total);
@@ -205,7 +204,6 @@ app.get('/data/cat/:Categories',async (req,res)=>{
       res.status(500).json({ message: 'Internal server error' });
     }
   })
-
 
 // Start the server
 const port = process.env.PORT || 3000;
