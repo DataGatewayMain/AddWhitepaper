@@ -6,17 +6,60 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const morgan = require("morgan"); 
-const apicache = require("apicache"); 
+const apicache = require("apicache");
+const { createClient } = require('redis');;
+
+
 
 const app = express();
 
-app.use(morgan('dev')); 
+app.use(morgan('dev'));
+
+// Create a Redis client
+const redisClient = createClient({
+    url: 'redis://:db3M7JfjTDzQW3zFDn16LHl6wzz7yNKI@redis-13790.c323.us-east-1-2.ec2.redns.redis-cloud.com:13790'
+});
+
+redisClient.on('error', (err) => {
+    console.error('Redis error:', err);
+});
+
+async function initializeRedis() {
+    try {
+        await redisClient.connect();
+        console.log('Connected to Redis');
+    } catch (err) {
+        console.error('Could not connect to Redis...', err);
+    }
+}
+
+// Create a Redis client
+// const redisClient  = redis.createClient({
+//     host: 'redis-13790.c323.us-east-1-2.ec2.redns.redis-cloud.com',
+//     port: 6379,
+//     password: 'db3M7JfjTDzQW3zFDn16LHl6wzz7yNKI'
+// });
+
+// redisClient.on('error', (err) => {
+//     console.log('Redis error:', err);
+// }); 
   
-//configure apicache  
-let cache = apicache.middleware 
-  
+// async function initializeRedis() {
+//     try {
+//         await redisClient.connect();
+//         console.log('Connected to Redis');
+//     } catch (err) {
+//         console.error('Could not connect to Redis...', err);
+//     }
+// }
+
+// Configure apicache to use Redis
+const cache = apicache.options({
+    redisClient: redisClient
+}).middleware;
+
 //caching all routes for 5 minutes 
-app.use(cache('30 seconds')) 
+app.use(cache('3 seconds')) 
 
 app.use(express.json())
 app.use(bodyParser.json());
@@ -36,7 +79,8 @@ app.use((req, res, next) => {
 // MongoDB connection
 mongoose.connect('mongodb+srv://Pratiksha2000:Pratiksha2000@cluster0.sgy5ilc.mongodb.net/?retryWrites=true&w=majority', {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
+    maxPoolSize: 10 // Adjust the pool size as needed
 }).then(() => {
     console.log('Connected to MongoDB');
 }).catch(err => {
@@ -73,32 +117,90 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // API endpoint to get all files
+// app.get('/data', async (req, res) => {
+//     try {
+//         const files = await File.find().sort({ _id: -1 });
+//         res.json(files);
+//     } catch (err) {
+//         res.status(500).send('Server error');
+//     }
+// });
+
+
+
+
+// app.post('/submit', upload.single('file'), async (req, res) => {
+//     try {
+
+//         const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl,privacylink } = req.body;
+        
+//         // Log the file details
+//         console.log('File details:', {
+//             summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl ,privacylink
+//         });
+
+//         const newFile = new File({
+//             summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, pdfUrl,privacylink
+//         });
+
+//         // Save the file details to the database
+//         await newFile.save();
+
+//         //  // Invalidate Redis cache
+//         //  redisClient.del('files');
+
+//         res.json({ message: 'File uploaded successfully', file: newFile });
+//     } catch (err) {
+//         console.error('Error uploading file:', err);
+//         res.status(500).send('Server error');
+//     }
+// });
+
+
+
+// new redis
+// Route to get data from MongoDB, with Redis caching
 app.get('/data', async (req, res) => {
     try {
-        const files = await File.find().sort({ _id: -1 });
-        res.json(files);
+        // Check if data exists in Redis cache
+        const files = await redisClient.get('files');
+
+        if (files) {
+            // Data exists in cache, return cached data
+            return res.json(JSON.parse(files));
+        } else {
+            // Data doesn't exist in cache, fetch from MongoDB
+            const filesFromDB = await File.find().sort({ _id: -1 });
+            // Store fetched data in Redis cache
+            await redisClient.setEx('files', 3600, JSON.stringify(filesFromDB));
+            // Return fetched data
+            return res.json(filesFromDB);
+        }
     } catch (err) {
+        console.error('Error fetching data:', err);
         res.status(500).send('Server error');
     }
 });
 
+// Route to upload a file and save details to MongoDB
 app.post('/submit', upload.single('file'), async (req, res) => {
     try {
-        
+        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, wpimg, Categories, jobtitle, pdfUrl, privacylink } = req.body;
 
-        const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl,privacylink } = req.body;
-        
         // Log the file details
         console.log('File details:', {
-            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle,pdfUrl ,privacylink
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, wpimg, Categories, jobtitle, pdfUrl, privacylink
         });
 
         const newFile = new File({
-            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain,wpimg, Categories, jobtitle, pdfUrl,privacylink
+            summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, wpimg, Categories, jobtitle, pdfUrl, privacylink
         });
 
         // Save the file details to the database
         await newFile.save();
+
+        // Invalidate Redis cache
+        await redisClient.del('files');
 
         res.json({ message: 'File uploaded successfully', file: newFile });
     } catch (err) {
@@ -107,6 +209,7 @@ app.post('/submit', upload.single('file'), async (req, res) => {
     }
 });
 
+// end redis
 
 // Endpoint to get a file by ID
 app.get('/data/:id', async (req, res) => {
@@ -208,7 +311,8 @@ app.get('/data/cat/:Categories',async (req,res)=>{
 
 // Start the server
 const port = process.env.PORT || 3000;
-app.listen(port, () => {
+app.listen(port, async () => {
+    await initializeRedis();
     console.log(`Server started on port ${port}`);
 });
 
