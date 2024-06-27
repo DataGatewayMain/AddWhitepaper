@@ -156,6 +156,16 @@ const upload = multer({ storage: storage });
 //     }
 // });
 
+// Middleware to invalidate cache for specific routes
+const invalidateCache = async (req, res, next) => {
+    try {
+        await redisClient.del('files');
+        next();
+    } catch (err) {
+        console.error('Error invalidating cache:', err);
+        next(err);
+    }
+};
 
 
 // new redis
@@ -183,7 +193,7 @@ app.get('/data', async (req, res) => {
 });
 
 // Route to upload a file and save details to MongoDB
-app.post('/submit', upload.single('file'), async (req, res) => {
+app.post('/submit', invalidateCache, async (req, res) => {
     try {
         const { summarizedContent, campaignId, campaignName, uniqueId, whitepaperHeading, imagedomain, wpimg, Categories, jobtitle, pdfUrl, privacylink } = req.body;
 
@@ -199,8 +209,6 @@ app.post('/submit', upload.single('file'), async (req, res) => {
         // Save the file details to the database
         await newFile.save();
 
-        // Invalidate Redis cache
-        await redisClient.del('files');
 
         res.json({ message: 'File uploaded successfully', file: newFile });
     } catch (err) {
@@ -235,7 +243,7 @@ app.get('/data/:id', async (req, res) => {
 });
 
 // Delete data by ID
-app.delete('/data/:id', async (req, res) => {
+app.delete('/data/:id',invalidateCache, async (req, res) => {
     try {
       const id = req.params.id;
       const deletedData = await File.findByIdAndDelete(id);
@@ -251,7 +259,7 @@ app.delete('/data/:id', async (req, res) => {
 
 
  // update data by id
-app.put('/data/:id',async (req,res)=>{
+app.put('/data/:id',invalidateCache, async (req,res)=>{
     try {
       const id = req.params.id;
       const newData = req.body; // Updated data
@@ -268,7 +276,7 @@ app.put('/data/:id',async (req,res)=>{
 
 
  // get data by campaign name
- app.get('/data/campaign/:campaignName', async (req, res) => {
+ app.get('/data/campaign/:campaignName',invalidateCache, async (req, res) => {
     try {
         const campaignName = req.params.campaignName;
         const data = await File.find({campaignName: campaignName }).sort({ _id: -1 });
@@ -281,7 +289,7 @@ app.put('/data/:id',async (req,res)=>{
   });
 
 // get data by category name
-app.get('/data/cat/:Categories',async (req,res)=>{
+app.get('/data/cat/:Categories',invalidateCache, async (req,res)=>{
     try {
       const Categories = req.params.Categories;
       const data = await File.find({ Categories: Categories }).sort({ _id: -1 });
@@ -295,7 +303,7 @@ app.get('/data/cat/:Categories',async (req,res)=>{
   
   
   // det data by jobtitle
-  app.get('/data/jt/:jobtitle',async (req,res)=>{
+  app.get('/data/jt/:jobtitle',invalidateCache, async (req,res)=>{
     try {
       const jobtitle = req.params.jobtitle
       const data = await File.find({ jobtitle: jobtitle }).sort({ _id: -1 });
